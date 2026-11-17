@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memotest Geográfico: Suecia</title>
+    <!-- Tailwind CSS para diseño responsivo y utilidades -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js para efectos de sonido interactivos sin archivos externos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Fuente Google Fonts: Poppins e Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome para iconos temáticos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* Configuración de tipografía y colores inspirados en Suecia */
+        :root {
+            --sweden-blue: #006AA7;
+            --sweden-dark-blue: #004B78;
+            --sweden-yellow: #FECC02;
+            --sweden-yellow-hover: #E5B700;
+            --bg-light: #F0F4F8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 50%, #fef9c3 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, .font-title {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Estilos 3D para las tarjetas del Memotest */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card.flipped .card-inner,
+        .card.matched .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            user-select: none;
+            transition: opacity 0.15s ease 0.15s, visibility 0.15s ease 0.15s;
+        }
+
+        /* Dorso de la tarjeta (estado inicial boca abajo) */
+        .card-front {
+            background: linear-gradient(145deg, var(--sweden-blue), var(--sweden-dark-blue));
+            color: white;
+            border: 3px solid var(--sweden-yellow);
+            transform: rotateY(0deg);
+            z-index: 2;
+        }
+
+        /* Ocultar explícitamente el número al voltear para evitar transparencias o superposición */
+        .card.flipped .card-front,
+        .card.matched .card-front {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* Diseño de cruz nórdica sutil en el dorso */
+        .card-front::before {
+            content: '';
+            position: absolute;
+            left: 32%;
+            top: 0;
+            bottom: 0;
+            width: 12%;
+            background-color: rgba(254, 204, 2, 0.15);
+            pointer-events: none;
+        }
+        .card-front::after {
+            content: '';
+            position: absolute;
+            top: 44%;
+            left: 0;
+            right: 0;
+            height: 12%;
+            background-color: rgba(254, 204, 2, 0.15);
+            pointer-events: none;
+        }
+
+        /* Frente de la tarjeta (al darse vuelta) */
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: #ffffff;
+            color: #1e293b;
+            opacity: 0;
+            visibility: hidden;
+            z-index: 1;
+        }
+
+        .card.flipped .card-back,
+        .card.matched .card-back {
+            opacity: 1;
+            visibility: visible;
+            z-index: 3;
+        }
+
+        /* Dorso de la tarjeta (estado inicial boca abajo) */
+        .card-front {
+            background: linear-gradient(145deg, var(--sweden-blue), var(--sweden-dark-blue));
+            color: white;
+            border: 3px solid var(--sweden-yellow);
+        }
+
+        /* Diseño de cruz nórdica sutil en el dorso */
+        .card-front::before {
+            content: '';
+            position: absolute;
+            left: 32%;
+            top: 0;
+            bottom: 0;
+            width: 12%;
+            background-color: rgba(254, 204, 2, 0.15);
+        }
+        .card-front::after {
+            content: '';
+            position: absolute;
+            top: 44%;
+            left: 0;
+            right: 0;
+            height: 12%;
+            background-color: rgba(254, 204, 2, 0.15);
+        }
+
+        /* Frente de la tarjeta (al darse vuelta) */
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: #ffffff;
+            color: #1e293b;
+        }
+
+        /* Distinción visual entre tarjeta de PREGUNTA y tarjeta de RESPUESTA */
+        .card-back.type-question {
+            border: 3px solid var(--sweden-blue);
+            background: linear-gradient(to bottom, #ffffff, #eff6ff);
+        }
+
+        .card-back.type-answer {
+            border: 3px solid #eab308;
+            background: linear-gradient(to bottom, #ffffff, #fefce8);
+        }
+
+        /* Animación cuando se encuentra un par */
+        .card.matched .card-back {
+            border-color: #10b981;
+            background: linear-gradient(to bottom, #ecfdf5, #d1fae5);
+            animation: pulseSuccess 0.6s ease-in-out;
+        }
+
+        /* Animación de error cuando no coinciden */
+        .card.shake {
+            animation: shakeCard 0.5s ease-in-out;
+        }
+
+        @keyframes pulseSuccess {
+            0% { transform: rotateY(180deg) scale(1); }
+            50% { transform: rotateY(180deg) scale(1.06); }
+            100% { transform: rotateY(180deg) scale(1); }
+        }
+
+        @keyframes shakeCard {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        /* Botones estilizados para juegos */
+        .btn-game {
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 0 #00385a;
+        }
+        .btn-game:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #00385a;
+        }
+
+        .btn-yellow {
+            background-color: var(--sweden-yellow);
+            color: #00385a;
+            box-shadow: 0 4px 0 #b89200;
+        }
+        .btn-yellow:hover {
+            background-color: var(--sweden-yellow-hover);
+        }
+        .btn-yellow:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #b89200;
+        }
+
+        /* Ajuste de scroll interno en tarjetas con texto largo en móviles */
+        .card-text-scroll {
+            overflow-y: auto;
+            max-height: 100%;
+            scrollbar-width: none; /* Firefox */
+        }
+        .card-text-scroll::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+    </style>
+</head>
+<body class="flex flex-col justify-between text-slate-800">
+
+    <!-- ENCABEZADO Y PANEL DE ESTADÍSTICAS -->
+    <header class="w-full bg-[#006AA7] text-white shadow-lg border-b-4 border-[#FECC02] py-3 px-4">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+            <!-- Título y Bandera -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-7 rounded bg-[#006AA7] border border-white/40 relative overflow-hidden shadow flex-shrink-0">
+                    <div class="absolute left-[30%] top-0 bottom-0 w-[16%] bg-[#FECC02]"></div>
+                    <div class="absolute top-[42%] left-0 right-0 h-[16%] bg-[#FECC02]"></div>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-extrabold tracking-tight leading-none">
+                        Suecia: <span class="text-[#FECC02]">El Encanto del Norte</span>
+                    </h1>
+                    <p class="text-[11px] sm:text-xs text-blue-100 mt-0.5">2°A • Antezana, Fernandez, Mamonte, Perez y Daogua</p>
+                </div>
+            </div>
+
+            <!-- Marcadores del Juego -->
+            <div class="flex items-center gap-3 sm:gap-5 bg-[#004B78] px-4 py-2 rounded-xl border border-blue-400/30">
+                <div class="text-center">
+                    <span class="block text-[10px] uppercase tracking-wider text-blue-200">Pares</span>
+                    <span id="score-display" class="font-title font-bold text-lg text-[#FECC02]">0 / 7</span>
+                </div>
+                <div class="h-6 w-[1px] bg-blue-400/30"></div>
+                <div class="text-center">
+                    <span class="block text-[10px] uppercase tracking-wider text-blue-200">Intentos</span>
+                    <span id="moves-display" class="font-title font-bold text-lg text-white">0</span>
+                </div>
+                <div class="h-6 w-[1px] bg-blue-400/30"></div>
+                <div class="text-center">
+                    <span class="block text-[10px] uppercase tracking-wider text-blue-200">Tiempo</span>
+                    <span id="timer-display" class="font-title font-bold text-lg text-white">00:00</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="flex-grow max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 flex flex-col items-center justify-center">
+        
+        <!-- Leyenda de ayuda rápida -->
+        <div class="flex flex-wrap items-center justify-center gap-4 mb-4 text-xs sm:text-sm bg-white/80 backdrop-blur px-4 py-2 rounded-full shadow-sm border border-slate-200">
+            <span class="flex items-center gap-1.5 font-semibold text-[#006AA7]">
+                <span class="w-3 h-3 rounded-full bg-[#006AA7] inline-block"></span> Tarjeta Azul = Pregunta
+            </span>
+            <span class="text-slate-300">|</span>
+            <span class="flex items-center gap-1.5 font-semibold text-amber-600">
+                <span class="w-3 h-3 rounded-full bg-[#FECC02] border border-amber-500 inline-block"></span> Tarjeta Amarilla = Respuesta
+            </span>
+        </div>
+
+        <!-- TABLERO DE TARJETAS (Grid Responsivo: 2 cols en móvil, 4 en tablet, 7 en escritorio ancho) -->
+        <div id="game-board" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 w-full max-w-6xl">
+            <!-- Las 14 tarjetas se generan dinámicamente desde JavaScript -->
+        </div>
+
+    </main>
+
+    <!-- CONTROLES EXTERNOS INFERIORES -->
+    <footer class="w-full py-4 px-4 flex flex-wrap items-center justify-center gap-3 bg-white/60 backdrop-blur border-t border-slate-200">
+        <button id="btn-new-game" class="btn-game bg-[#006AA7] hover:bg-[#00588a] text-white font-bold py-2.5 px-5 rounded-xl flex items-center gap-2 text-sm sm:text-base cursor-pointer">
+            <i class="fa-solid fa-rotate-right"></i> Nuevo Juego (Barajar)
+        </button>
+        
+        <button id="btn-peek" class="btn-yellow font-bold py-2.5 px-5 rounded-xl flex items-center gap-2 text-sm sm:text-base cursor-pointer">
+            <i class="fa-solid fa-eye"></i> Vistazo Rápido (3s)
+        </button>
+
+        <button id="btn-study-guide" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2.5 px-5 rounded-xl shadow flex items-center gap-2 text-sm sm:text-base transition cursor-pointer">
+            <i class="fa-solid fa-book-open"></i> Guía de Temas
+        </button>
+
+        <button id="btn-sound" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold py-2.5 px-3.5 rounded-xl shadow-sm flex items-center justify-center cursor-pointer" title="Activar/Desactivar sonido">
+            <i id="sound-icon" class="fa-solid fa-volume-high text-[#006AA7]"></i>
+        </button>
+    </footer>
+
+    <!-- MODAL DE FEEDBACK DE PAR ENCONTRADO (Toast / Banner flotante) -->
+    <div id="match-toast" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-2xl shadow-2xl border-2 border-emerald-300 flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none z-40 max-w-[90vw]">
+        <i class="fa-solid fa-circle-check text-2xl text-emerald-200"></i>
+        <div>
+            <p id="toast-topic" class="text-xs uppercase font-bold tracking-wider text-emerald-200">Tema</p>
+            <p id="toast-msg" class="text-sm font-semibold">¡Par correcto encontrado!</p>
+        </div>
+    </div>
+
+    <!-- MODAL DE VICTORIA -->
+    <div id="victory-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl border-4 border-[#FECC02] transform transition-all">
+            <div class="w-20 h-20 bg-yellow-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-[#006AA7] mb-2">¡Felicitaciones!</h2>
+            <p class="text-slate-600 mb-6 text-sm sm:text-base">
+                Completaste los 7 ejes del libro <strong class="text-slate-800">"Suecia: El Encanto del Norte"</strong>.
+            </p>
+            
+            <div class="grid grid-cols-2 gap-3 bg-slate-100 p-4 rounded-2xl mb-6">
+                <div>
+                    <span class="block text-xs text-slate-500 uppercase font-bold">Tiempo Total</span>
+                    <span id="final-time" class="text-xl font-extrabold text-[#006AA7]">00:00</span>
+                </div>
+                <div>
+                    <span class="block text-xs text-slate-500 uppercase font-bold">Intentos</span>
+                    <span id="final-moves" class="text-xl font-extrabold text-[#006AA7]">0</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <button id="btn-play-again" class="btn-game bg-[#006AA7] text-white font-bold py-3 px-6 rounded-xl w-full cursor-pointer">
+                    <i class="fa-solid fa-play mr-1"></i> Jugar de nuevo
+                </button>
+                <button id="btn-open-guide-win" class="btn-yellow font-bold py-3 px-6 rounded-xl w-full cursor-pointer">
+                    <i class="fa-solid fa-list-check mr-1"></i> Ver Resumen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE GUÍA DE ESTUDIO (Los 7 temas completos para repasar) -->
+    <div id="guide-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border-4 border-[#006AA7] overflow-hidden">
+            <div class="bg-[#006AA7] text-white p-5 flex items-center justify-between border-b-4 border-[#FECC02]">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-map-location-dot text-2xl text-[#FECC02]"></i>
+                    <h2 class="text-xl font-bold">Guía de Estudio: Geografía de Suecia</h2>
+                </div>
+                <button id="btn-close-guide" class="text-white hover:text-[#FECC02] text-2xl leading-none cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div id="guide-content" class="p-5 overflow-y-auto space-y-4 text-left">
+                <!-- Se llena dinámicamente con los 7 ejes temáticos -->
+            </div>
+
+            <div class="p-4 bg-slate-100 border-t border-slate-200 text-right">
+                <button id="btn-close-guide-bottom" class="btn-game bg-[#006AA7] text-white font-bold py-2 px-6 rounded-xl cursor-pointer">
+                    Volver al Juego
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * BASE DE DATOS DE CONTENIDO GEOGRÁFICO SOBRE SUECIA
+         * Extraída 100% del libro "Suecia: El Encanto del Norte" (2°A).
+         * Organizada según los 7 capítulos del índice (págs. 1 a 33).
+         */
+        const swedenTopics = [
+            {
+                id: 1,
+                topic: "1. Presentación y Ubicación (Págs. 1-7)",
+                icon: "fa-earth-europe",
+                variants: [
+                    {
+                        q: "¿Dónde se ubica Suecia, con qué países limita y qué mares la rodean?",
+                        a: "En el norte de Europa (península escandinava); limita con Noruega y Finlandia, y la rodean el mar Báltico y el golfo de Botnia."
+                    },
+                    {
+                        q: "¿Cómo es la organización política y administrativa de Suecia?",
+                        a: "Monarquía constitucional y democracia parlamentaria (rey Carlos XVI Gustavo, Parlamento Riksdag de 349 miembros), dividida en 21 condados y 290 municipios."
+                    },
+                    {
+                        q: "¿Cuál es la superficie, capital, moneda y día nacional de Suecia?",
+                        a: "Superficie de 447.424 km², capital Estocolmo, idioma sueco, moneda corona sueca y su día nacional es el 6 de junio."
+                    },
+                    {
+                        q: "¿Qué funciones destacan a las ciudades de Gotemburgo, Malmö, Uppsala y Kiruna?",
+                        a: "Gotemburgo (puerto e industria), Malmö (unida a Dinamarca por el puente Øresund), Uppsala (antigua universidad) y Kiruna (minería y auroras boreales)."
+                    }
+                ]
+            },
+            {
+                id: 2,
+                topic: "2. Población y Demografía (Págs. 8-14)",
+                icon: "fa-users",
+                variants: [
+                    {
+                        q: "¿Cuántos habitantes tiene Suecia, cuál es su densidad y dónde se concentran?",
+                        a: "Tiene unos 10,6 millones de habitantes y baja densidad (~25 hab/km²); la mayoría vive en el sur y en ciudades como Estocolmo, Gotemburgo y Malmö."
+                    },
+                    {
+                        q: "¿Cómo es la estructura de edad de la población sueca y por qué?",
+                        a: "Es una población relativamente envejecida con alta proporción de adultos mayores, debido a su elevada esperanza de vida y disminución de la natalidad."
+                    },
+                    {
+                        q: "¿Qué impacto tuvieron las migraciones en Suecia en las últimas décadas?",
+                        a: "La llegada de inmigrantes (de Europa, Medio Oriente, Asia y África) impulsó el crecimiento poblacional y aportó gran diversidad cultural."
+                    }
+                ]
+            },
+            {
+                id: 3,
+                topic: "3. Características Naturales (Págs. 15-22)",
+                icon: "fa-mountain-sun",
+                variants: [
+                    {
+                        q: "¿Cómo es el relieve de Suecia y cuál es su punto más elevado?",
+                        a: "Al oeste están los montes Escandinavos, en el centro y sur hay llanuras, y su punto más alto es el monte Kebnekaise (en Laponia)."
+                    },
+                    {
+                        q: "¿Cuáles son los principales lagos y ríos de Suecia y para qué se aprovechan?",
+                        a: "Lagos Vänern (el mayor), Vättern y Mälaren; ríos Göta älv, Dalälven y Torne. Sirven para agua potable, recreación y energía hidroeléctrica."
+                    },
+                    {
+                        q: "¿Qué fenómenos naturales ocurren en el norte de Suecia (Laponia, Abisko y Kiruna)?",
+                        a: "Las auroras boreales en otoño e invierno (partículas solares en la atmósfera) y el sol de medianoche en verano (24 horas de luz solar)."
+                    },
+                    {
+                        q: "¿Qué vegetación y fauna caracterizan a los ambientes naturales de Suecia?",
+                        a: "Bosques boreales de coníferas (pinos, abetos) y caducifolios (abedules, robles); fauna como el alce, reno, oso pardo, lince euroasiático, lobo y zorro ártico."
+                    }
+                ]
+            },
+            {
+                id: 4,
+                topic: "4. Economía y Actividades (Págs. 23-28)",
+                icon: "fa-industry",
+                variants: [
+                    {
+                        q: "¿Qué cultivos y cría de animales destacan en la agricultura y ganadería sueca?",
+                        a: "En el sur y centro se cultiva trigo, cebada, avena y papas, y se crían vacas, cerdos y aves; en el norte destaca la cría de renos del pueblo sami."
+                    },
+                    {
+                        q: "¿Qué industrias y empresas suecas son reconocidas internacionalmente?",
+                        a: "Industria automotriz, siderúrgica, minera, forestal y tecnológica, con empresas mundiales como Volvo, Scania, Ericsson e IKEA."
+                    },
+                    {
+                        q: "¿Qué productos exporta Suecia y quiénes son sus principales socios comerciales?",
+                        a: "Exporta vehículos, máquinas, equipos electrónicos, medicamentos, acero y madera; sus socios principales son Alemania, Noruega, Dinamarca y EE. UU."
+                    }
+                ]
+            },
+            {
+                id: 5,
+                topic: "5. Sociedad y Cultura (Págs. 29-31)",
+                icon: "fa-landmark",
+                variants: [
+                    {
+                        q: "¿Qué lenguas minoritarias reconoce Suecia además del idioma oficial sueco?",
+                        a: "Reconoce cinco lenguas minoritarias oficiales: el finés, el meänkieli, el sami, el romaní y el yidis."
+                    },
+                    {
+                        q: "¿Qué comidas típicas y costumbres sociales caracterizan a la cultura sueca?",
+                        a: "Las albóndigas (köttbullar), salmón, arenques y bollos de canela (kanelbullar), junto con el 'fika' (pausa para tomar café y conversar)."
+                    },
+                    {
+                        q: "¿Qué es el Midsommar y quiénes integran el pueblo indígena sami?",
+                        a: "El Midsommar es la fiesta del solsticio de verano con bailes y flores; el pueblo sami habita el norte y se vincula a la cría de renos y su cultura ancestral."
+                    }
+                ]
+            },
+            {
+                id: 6,
+                topic: "6. Curiosidades (Pág. 32)",
+                icon: "fa-lightbulb",
+                variants: [
+                    {
+                        q: "¿Qué particularidad tiene el hotel de Jukkasjärvi y la entrega de los Premios Nobel?",
+                        a: "En Jukkasjärvi hay un hotel construido con hielo y nieve cada invierno; los Premios Nobel se entregan en Estocolmo (salvo el de la Paz, en Oslo)."
+                    },
+                    {
+                        q: "¿En qué consiste el derecho de acceso a la naturaleza en Suecia?",
+                        a: "Permite que todas las personas disfruten libremente de los espacios naturales del país, siempre respetando normas para cuidar el ambiente."
+                    }
+                ]
+            },
+            {
+                id: 7,
+                topic: "7. Conclusión (Pág. 33)",
+                icon: "fa-flag-checkered",
+                variants: [
+                    {
+                        q: "Según la conclusión del libro, ¿cómo logra destacarse Suecia en el mundo?",
+                        a: "Combina modernidad, desarrollo tecnológico y alta calidad de vida con el cuidado de sus bosques, lagos y la conservación de su identidad cultural."
+                    },
+                    {
+                        q: "¿Qué nos permite comprender el recorrido geográfico por Suecia?",
+                        a: "Comprender cómo se organiza un país europeo y descubrir la diversidad de paisajes, costumbres y formas de vida que existen en el mundo."
+                    }
+                ]
+            }
+        ];
+
+        // Variables de estado del juego
+        let cardsDeck = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        let isLocked = false;
+        let gameStarted = false;
+        let soundEnabled = true;
+        let currentRoundPairs = [];
+
+        // Referencias al DOM
+        const gameBoard = document.getElementById('game-board');
+        const scoreDisplay = document.getElementById('score-display');
+        const movesDisplay = document.getElementById('moves-display');
+        const timerDisplay = document.getElementById('timer-display');
+        const matchToast = document.getElementById('match-toast');
+        const victoryModal = document.getElementById('victory-modal');
+        const guideModal = document.getElementById('guide-modal');
+
+        // Sistema de Sonido con Tone.js (sintetizador ligero)
+        const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+        synth.volume.value = -8;
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                const now = Tone.now();
+                if (type === 'flip') {
+                    synth.triggerAttackRelease("C5", "32n", now);
+                } else if (type === 'match') {
+                    synth.triggerAttackRelease(["E5", "G5", "C6"], "16n", now);
+                } else if (type === 'error') {
+                    synth.triggerAttackRelease(["A3", "G#3"], "16n", now);
+                } else if (type === 'win') {
+                    synth.triggerAttackRelease("C5", "8n", now);
+                    synth.triggerAttackRelease("E5", "8n", now + 0.12);
+                    synth.triggerAttackRelease("G5", "8n", now + 0.24);
+                    synth.triggerAttackRelease("C6", "4n", now + 0.36);
+                }
+            } catch (e) {
+                console.warn("Audio no disponible aún:", e);
+            }
+        }
+
+        // Inicializar o reiniciar partida
+        function initGame() {
+            // Reiniciar variables
+            clearInterval(timerInterval);
+            secondsElapsed = 0;
+            moves = 0;
+            matchedPairs = 0;
+            flippedCards = [];
+            isLocked = false;
+            gameStarted = false;
+            currentRoundPairs = [];
+
+            updateStatsUI();
+            victoryModal.classList.add('hidden');
+            victoryModal.classList.remove('flex');
+
+            // Seleccionar una variante aleatoria por cada uno de los 7 temas
+            cardsDeck = [];
+            swedenTopics.forEach(item => {
+                const randomVariant = item.variants[Math.floor(Math.random() * item.variants.length)];
+                currentRoundPairs.push({
+                    id: item.id,
+                    topic: item.topic,
+                    icon: item.icon,
+                    q: randomVariant.q,
+                    a: randomVariant.a
+                });
+
+                // Tarjeta de PREGUNTA
+                cardsDeck.push({
+                    pairId: item.id,
+                    type: 'question',
+                    topic: item.topic,
+                    icon: item.icon,
+                    text: randomVariant.q
+                });
+
+                // Tarjeta de RESPUESTA
+                cardsDeck.push({
+                    pairId: item.id,
+                    type: 'answer',
+                    topic: item.topic,
+                    icon: item.icon,
+                    text: randomVariant.a
+                });
+            });
+
+            // Barajar las 14 tarjetas (Algoritmo Fisher-Yates)
+            for (let i = cardsDeck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cardsDeck[i], cardsDeck[j]] = [cardsDeck[j], cardsDeck[i]];
+            }
+
+            renderBoard();
+            populateStudyGuide();
+        }
+
+        // Renderizar tarjetas en el tablero
+        function renderBoard() {
+            gameBoard.innerHTML = '';
+
+            cardsDeck.forEach((cardData, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card perspective-1000 h-44 sm:h-48 md:h-52 w-full';
+                cardEl.dataset.index = index;
+                cardEl.dataset.pairId = cardData.pairId;
+                cardEl.dataset.type = cardData.type;
+
+                const isQuestion = cardData.type === 'question';
+                const badgeClass = isQuestion 
+                    ? 'bg-[#006AA7] text-white' 
+                    : 'bg-[#FECC02] text-[#00385a]';
+                const badgeLabel = isQuestion ? 'PREGUNTA' : 'RESPUESTA';
+                const backClass = isQuestion ? 'type-question' : 'type-answer';
+
+                cardEl.innerHTML = `
+                    <div class="card-inner">
+                        <!-- Cara oculta (Dorso Suecia) -->
+                        <div class="card-front">
+                            <div class="relative bg-[#004B78]/90 px-3 py-1.5 rounded-full border border-[#FECC02]/60 shadow-md mb-1">
+                                <span class="font-title font-extrabold text-[#FECC02] text-base sm:text-lg">#${index + 1}</span>
+                            </div>
+                            <span class="relative text-[11px] uppercase tracking-widest text-blue-100 font-semibold mt-1">Suecia</span>
+                        </div>
+
+                        <!-- Cara visible (Contenido) -->
+                        <div class="card-back ${backClass} justify-between">
+                            <div class="w-full flex items-center justify-between gap-1 border-b border-slate-200 pb-1.5">
+                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${badgeClass}">
+                                    ${badgeLabel}
+                                </span>
+                                <i class="fa-solid ${cardData.icon} text-xs text-slate-400"></i>
+                            </div>
+                            
+                            <div class="card-text-scroll my-auto py-1 flex items-center justify-center">
+                                <p class="text-xs sm:text-[13px] leading-snug font-semibold text-slate-800">
+                                    ${cardData.text}
+                                </p>
+                            </div>
+
+                            <div class="w-full pt-1 border-t border-slate-100">
+                                <span class="block text-[9px] font-bold text-slate-400 truncate">
+                                    ${cardData.topic}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                cardEl.addEventListener('click', () => handleCardClick(cardEl, cardData));
+                gameBoard.appendChild(cardEl);
+            });
+        }
+
+        // Lógica al tocar una tarjeta
+        function handleCardClick(cardEl, cardData) {
+            if (isLocked) return;
+            if (cardEl.classList.contains('flipped') || cardEl.classList.contains('matched')) return;
+
+            // Iniciar cronómetro en el primer clic
+            if (!gameStarted) {
+                gameStarted = true;
+                startTimer();
+            }
+
+            playSound('flip');
+            cardEl.classList.add('flipped');
+            flippedCards.push({ el: cardEl, data: cardData });
+
+            if (flippedCards.length === 2) {
+                moves++;
+                updateStatsUI();
+                checkMatch();
+            }
+        }
+
+        // Comprobar si las 2 tarjetas son par (mismo tema y distinta naturaleza: pregunta + respuesta)
+        function checkMatch() {
+            isLocked = true;
+            const [first, second] = flippedCards;
+
+            const isSameTopic = first.data.pairId === second.data.pairId;
+            const isDifferentType = first.data.type !== second.data.type;
+
+            if (isSameTopic && isDifferentType) {
+                // ¡Es un par correcto!
+                setTimeout(() => {
+                    playSound('match');
+                    first.el.classList.add('matched');
+                    second.el.classList.add('matched');
+                    matchedPairs++;
+                    updateStatsUI();
+                    showMatchToast(first.data.topic);
+
+                    flippedCards = [];
+                    isLocked = false;
+
+                    if (matchedPairs === swedenTopics.length) {
+                        handleVictory();
+                    }
+                }, 400);
+            } else {
+                // No coinciden
+                setTimeout(() => {
+                    playSound('error');
+                    first.el.classList.add('shake');
+                    second.el.classList.add('shake');
+                }, 500);
+
+                setTimeout(() => {
+                    first.el.classList.remove('flipped', 'shake');
+                    second.el.classList.remove('flipped', 'shake');
+                    flippedCards = [];
+                    isLocked = false;
+                }, 1300);
+            }
+        }
+
+        // Mostrar notificación breve del eje temático completado
+        let toastTimeout;
+        function showMatchToast(topicName) {
+            clearTimeout(toastTimeout);
+            document.getElementById('toast-topic').textContent = topicName;
+            document.getElementById('toast-msg').textContent = "¡Excelente! Pregunta y respuesta emparejadas.";
+            matchToast.classList.remove('opacity-0', 'translate-y-4');
+            matchToast.classList.add('opacity-100', 'translate-y-0');
+
+            toastTimeout = setTimeout(() => {
+                matchToast.classList.add('opacity-0', 'translate-y-4');
+                matchToast.classList.remove('opacity-100', 'translate-y-0');
+            }, 2600);
+        }
+
+        // Función de Vistazo Rápido (ayuda visual por 3 segundos)
+        function peekCards() {
+            if (isLocked || matchedPairs === swedenTopics.length) return;
+            isLocked = true;
+            const allCards = document.querySelectorAll('.card:not(.matched)');
+            allCards.forEach(c => c.classList.add('flipped'));
+
+            setTimeout(() => {
+                allCards.forEach(c => {
+                    // Mantener dada vuelta si estaba previamente seleccionada en este turno
+                    const isCurrentlySelected = flippedCards.some(fc => fc.el === c);
+                    if (!isCurrentlySelected) {
+                        c.classList.remove('flipped');
+                    }
+                });
+                isLocked = false;
+            }, 2800);
+        }
+
+        // Cronómetro
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                updateStatsUI();
+            }, 1000);
+        }
+
+        function formatTime(secs) {
+            const mins = Math.floor(secs / 60).toString().padStart(2, '0');
+            const remSecs = (secs % 60).toString().padStart(2, '0');
+            return `${mins}:${remSecs}`;
+        }
+
+        function updateStatsUI() {
+            scoreDisplay.textContent = `${matchedPairs} / ${swedenTopics.length}`;
+            movesDisplay.textContent = moves;
+            timerDisplay.textContent = formatTime(secondsElapsed);
+        }
+
+        // Victoria
+        function handleVictory() {
+            clearInterval(timerInterval);
+            setTimeout(() => {
+                playSound('win');
+                document.getElementById('final-time').textContent = formatTime(secondsElapsed);
+                document.getElementById('final-moves').textContent = moves;
+                victoryModal.classList.remove('hidden');
+                victoryModal.classList.add('flex');
+            }, 600);
+        }
+
+        // Llenar la Guía de Estudio con todos los temas
+        function populateStudyGuide() {
+            const container = document.getElementById('guide-content');
+            container.innerHTML = '';
+
+            swedenTopics.forEach(item => {
+                const block = document.createElement('div');
+                block.className = 'bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm';
+                
+                let variantsHTML = item.variants.map(v => `
+                    <div class="mt-2 pt-2 border-t border-slate-200/70 text-sm">
+                        <p class="font-bold text-[#006AA7]"><i class="fa-solid fa-circle-question mr-1"></i> ${v.q}</p>
+                        <p class="text-slate-700 mt-1"><i class="fa-solid fa-check text-emerald-600 mr-1"></i> ${v.a}</p>
+                    </div>
+                `).join('');
+
+                block.innerHTML = `
+                    <div class="flex items-center gap-2 text-base font-extrabold text-slate-800">
+                        <span class="w-8 h-8 rounded-lg bg-[#006AA7] text-[#FECC02] flex items-center justify-center">
+                            <i class="fa-solid ${item.icon}"></i>
+                        </span>
+                        <span>${item.topic}</span>
+                    </div>
+                    ${variantsHTML}
+                `;
+                container.appendChild(block);
+            });
+        }
+
+        // Eventos de botones
+        document.getElementById('btn-new-game').addEventListener('click', initGame);
+        document.getElementById('btn-play-again').addEventListener('click', initGame);
+        document.getElementById('btn-peek').addEventListener('click', peekCards);
+
+        document.getElementById('btn-study-guide').addEventListener('click', () => {
+            guideModal.classList.remove('hidden');
+            guideModal.classList.add('flex');
+        });
+
+        document.getElementById('btn-open-guide-win').addEventListener('click', () => {
+            victoryModal.classList.add('hidden');
+            victoryModal.classList.remove('flex');
+            guideModal.classList.remove('hidden');
+            guideModal.classList.add('flex');
+        });
+
+        document.getElementById('btn-close-guide').addEventListener('click', () => {
+            guideModal.classList.add('hidden');
+            guideModal.classList.remove('flex');
+        });
+
+        document.getElementById('btn-close-guide-bottom').addEventListener('click', () => {
+            guideModal.classList.add('hidden');
+            guideModal.classList.remove('flex');
+        });
+
+        document.getElementById('btn-sound').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high text-[#006AA7]';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+            }
+        });
+
+        // Iniciar juego al cargar la ventana
+        window.onload = function() {
+            initGame();
+        };
+    </script>
+</body>
+</html>
